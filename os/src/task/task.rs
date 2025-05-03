@@ -9,6 +9,9 @@ pub struct TaskControlBlock {
     pub task_status: TaskStatus,
     /// The task context
     pub task_cx: TaskContext,
+    /// The task call count
+    /// TCB应尽可能小，暂时用u16来表示，最多可以表示65535次调用
+    pub task_sys_call_count: [u16; 512],
 }
 
 /// The status of a task
