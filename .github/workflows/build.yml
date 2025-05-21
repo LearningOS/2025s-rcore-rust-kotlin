@@ -43,7 +43,6 @@ jobs:
       - name: Run tests
         run: |
           qemu-system-riscv64 --version
-          rustup update # 升级rust nightly版本到1.82.0以上
           rustup target add riscv64gc-unknown-none-elf
           git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
           git clone https://github.com/LearningOS/rCore-Tutorial-Checker-2025S.git ci-user
