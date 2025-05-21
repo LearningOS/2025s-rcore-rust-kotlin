@@ -42,9 +42,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run tests
         run: |
-          rustup update # 升级rust nightly版本到1.82.0以上
           qemu-system-riscv64 --version
           rustup target add riscv64gc-unknown-none-elf
+          rustup update # 升级rust nightly版本到1.82.0以上
           git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
           git clone https://github.com/LearningOS/rCore-Tutorial-Checker-2025S.git ci-user
           git clone https://github.com/LearningOS/rCore-Tutorial-Test-2025S.git ci-user/user
