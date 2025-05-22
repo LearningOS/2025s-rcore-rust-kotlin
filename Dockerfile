@@ -73,8 +73,11 @@ RUN rustup --version && \
     cargo --version && \
     rustc --version
 
+# install cargo binstall
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
 # 2.3 Env
-RUN cargo install cargo-binutils; \
+RUN cargo binstall cargo-binutils -y; \
     rustup target add riscv64gc-unknown-none-elf; \
 	rustup component add rust-src; \
 	rustup component add llvm-tools-preview; \
