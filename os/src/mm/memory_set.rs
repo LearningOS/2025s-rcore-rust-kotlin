@@ -37,6 +37,7 @@ lazy_static! {
 pub struct MemorySet {
     page_table: PageTable,
     areas: Vec<MapArea>,
+    mmap: BTreeMap<VirtPageNum, FrameTracker>,
 }
 
 impl MemorySet {
@@ -45,6 +46,7 @@ impl MemorySet {
         Self {
             page_table: PageTable::new(),
             areas: Vec::new(),
+            mmap: BTreeMap::new(),
         }
     }
     /// Get the page table token
@@ -261,6 +263,26 @@ impl MemorySet {
         } else {
             false
         }
+    }
+
+    /// map a memory frame
+    pub fn map_memory(&mut self, vpn: VirtPageNum, flags: MapPermission) {
+        let frame = frame_alloc().unwrap();
+        let ppn = frame.ppn;
+        self.mmap.insert(vpn, frame);
+        let flags = PTEFlags::from_bits(flags.bits).unwrap();
+        self.page_table.map(vpn, ppn, flags);
+    }
+
+    /// unmap a memory area
+    pub fn unmap_memory(&mut self, vpn: VirtPageNum) {
+        self.page_table.unmap(vpn);
+        self.mmap.remove(&vpn);
+    }
+
+    /// whether exists a mapped memory frame
+    pub fn has_mapped_memory(&self, vpn: VirtPageNum) -> bool {
+        self.mmap.contains_key(&vpn)
     }
 }
 /// map area structure, controls a contiguous piece of virtual memory

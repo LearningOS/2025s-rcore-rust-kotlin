@@ -15,6 +15,7 @@ mod switch;
 mod task;
 
 use crate::loader::{get_app_data, get_num_app};
+use crate::mm::{MapPermission, VPNRange};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::vec::Vec;
@@ -153,6 +154,53 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    /// Get system call count
+    fn get_syscall_count(&self, syscall_id: usize) -> usize {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        let syscall_count = &inner.tasks[current].syscall_count;
+        *syscall_count.get(&syscall_id).unwrap_or(&0)
+    }
+
+    /// Increase system call count
+    fn increase_syscall_count(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        let syscall_count = &mut inner.tasks[current].syscall_count;
+        *syscall_count.entry(syscall_id).or_insert(0) += 1;
+    }
+
+    /// map a memory area
+    fn map_memory_area(
+        &self,
+        range: VPNRange,
+        flags: MapPermission,
+    ) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        for vpn in range {
+            inner.tasks[current].memory_set.map_memory(vpn, flags);
+        }
+    }
+
+    /// unmap a memory area
+    fn unmap_memory_area(
+        &self,
+        range: VPNRange,
+    ) -> isize {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        for vpn in range {
+            if !inner.tasks[current].memory_set.has_mapped_memory(vpn) {
+                return -1;
+            }
+        }
+        for vpn in range {
+            inner.tasks[current].memory_set.unmap_memory(vpn);
+        }
+        return 0;
+    }
 }
 
 /// Run the first task in task list.
@@ -201,4 +249,24 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 /// Change the current 'Running' task's program break
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
+}
+
+/// Get system call count
+pub fn get_syscall_count(syscall_id: usize) -> usize {
+    TASK_MANAGER.get_syscall_count(syscall_id)
+}
+
+/// Increase system call count
+pub fn increase_syscall_count(syscall_id: usize) {
+    TASK_MANAGER.increase_syscall_count(syscall_id);
+}
+
+/// map a memory area
+pub fn map_memory_area(range: VPNRange, flags: MapPermission) {
+    TASK_MANAGER.map_memory_area(range, flags);
+}
+
+/// unmap a memory area
+pub fn unmap_memory_area(range: VPNRange) -> isize {
+    TASK_MANAGER.unmap_memory_area(range)
 }
