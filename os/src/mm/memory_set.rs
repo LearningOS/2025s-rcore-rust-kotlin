@@ -60,6 +60,28 @@ impl MemorySet {
             None,
         );
     }
+    /// Remove a area with start and end virtual address.
+    pub fn remove_area (
+        &mut self,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+     ) -> isize{
+        let start_vpn = start_va.floor();
+        let end_vpn = end_va.ceil();
+        let vpn = VPNRange::new(start_vpn, end_vpn);
+        for i in vpn {
+            if let Some(pte) = self.page_table.translate(i) {
+                if pte.is_valid() {
+                    self.page_table.unmap(i);
+                } else {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
+        }
+        0
+     }
     /// remove a area
     pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
         if let Some((idx, area)) = self

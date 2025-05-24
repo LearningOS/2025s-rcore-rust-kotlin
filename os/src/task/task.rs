@@ -2,7 +2,7 @@
 use super::TaskContext;
 use super::{kstack_alloc, pid_alloc, KernelStack, PidHandle};
 use crate::config::TRAP_CONTEXT_BASE;
-use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
+use crate::mm::{MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::trap::{trap_handler, TrapContext};
 use alloc::sync::{Arc, Weak};
@@ -36,6 +36,8 @@ impl TaskControlBlock {
     }
 }
 
+const INIT_PRORITY: usize = 16;
+
 pub struct TaskControlBlockInner {
     /// The physical page number of the frame where the trap context is placed
     pub trap_cx_ppn: PhysPageNum,
@@ -68,6 +70,12 @@ pub struct TaskControlBlockInner {
 
     /// Program break
     pub program_brk: usize,
+
+    /// Priority
+    pub priority: usize,
+
+    /// Stride
+    pub stride: usize,
 }
 
 impl TaskControlBlockInner {
@@ -118,6 +126,8 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: user_sp,
                     program_brk: user_sp,
+                    priority: INIT_PRORITY,
+                    stride: 0,
                 })
             },
         };
@@ -191,6 +201,8 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: parent_inner.heap_bottom,
                     program_brk: parent_inner.program_brk,
+                    priority: INIT_PRORITY,
+                    stride: 0,
                 })
             },
         });
@@ -235,6 +247,18 @@ impl TaskControlBlock {
         } else {
             None
         }
+    }
+
+    /// map a memory area to the process
+    pub fn map_memory_area(&self, start_va: VirtAddr, end_va: VirtAddr, flags: MapPermission) {
+        let mut inner = self.inner_exclusive_access();
+        inner.memory_set.insert_framed_area(start_va, end_va, flags);
+    }
+
+    /// unmap a memory area to the process
+    pub fn unmap_memory_area(&self, start_va: VirtAddr, end_va: VirtAddr) -> isize {
+        let mut inner = self.inner_exclusive_access();
+        inner.memory_set.remove_area(start_va, end_va)
     }
 }
 

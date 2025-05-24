@@ -31,6 +31,18 @@ jobs:
     container:
       image: duskmoon/dev-env:rcore-ci
     steps:
+      - name: Remove Cargo proxy config
+        run: |
+          unset RUSTUP_DIST_SERVER
+          unset RUSTUP_UPDATE_ROOT
+          unset CARGO_HTTP_MULTIPLEXING
+          # 删除或重置全局配置
+          rm -f ${CARGO_HOME}/config.toml || true
+          rm -rf ${CARGO_HOME}/registry/* || true
+      - name: Install Cargo binutils
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall -y cargo-binutils
       - uses: actions/checkout@v4
       - name: Run tests
         run: |
